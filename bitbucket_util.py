@@ -140,8 +140,6 @@ if __name__ == '__main__':
   username = os.getenv('BITBUCKET_USERNAME', args.username)
   secret = os.getenv('BITBUCKET_SECRET', args.secret)
 
-  print(username, secret)
-
   if not username or not secret:
     parser.error('You must specify a username and secret, either by using the BITBUCKET_USERNAME and BITBUCKET_SECRET environment variables, or by using --username and --secret arguments')
 
