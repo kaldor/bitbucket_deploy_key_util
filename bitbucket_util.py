@@ -38,7 +38,7 @@ class Repo():
 def list_repos(regexes):
   regexes = map(re.compile, regexes)
 
-  req = urllib2.Request('https://api.bitbucket.org/1.0/user/repositories'.format(accountname='nhelke'))
+  req = urllib2.Request('https://api.bitbucket.org/1.0/user/repositories')
   basicAuthString = base64.standard_b64encode('{}:{}'.format(username, secret))
   req.add_header("Authorization", "Basic {}".format(basicAuthString))
   f = urllib2.urlopen(req)
