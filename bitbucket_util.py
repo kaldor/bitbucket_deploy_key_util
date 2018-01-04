@@ -79,7 +79,7 @@ def add_deploy_key(key, label, repos):
 
 class SSHKeyEntry(collections.namedtuple('SSHKeyEntry', ['key', 'repo', 'id', 'label'])):
   def __str__(self):
-    return ' '.join(('{}'.format(getattr(self, field)) for field in self._fields))
+    return '\t'.join(('{}'.format(getattr(self, field)) for field in self._fields))
 
 def list_deploy_keys(repos):
   for repo in map(Repo, repos):
