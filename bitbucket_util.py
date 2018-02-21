@@ -35,6 +35,25 @@ class Repo():
   def __repr__(self):
     return '{}/{}'.format(self.owner, self.slug)
 
+class API2Request():
+  def __init__(self, url):
+    self.nexturl = url
+    
+  def _loadNextPage(self):
+    req = urllib2.Request(self.nexturl)
+    basicAuthString = base64.standard_b64encode('{}:{}'.format(username, secret))
+    req.add_header("Authorization", "Basic {}".format(basicAuthString))
+    f = urllib2.urlopen(req)
+    response = json.load(f)
+    self.nexturl = response.get('next')
+    return response['values']
+  
+  def open(self):
+    while self.nexturl:
+      for value in self._loadNextPage():
+        yield value
+
+
 def list_repos(regexes):
   regexes = map(re.compile, regexes)
 
@@ -108,6 +127,26 @@ def remove_deploy_key(key, repos):
     else:
       raise LookupError('{} was not found on repo {}'.format(key, repo))
 
+class WebHook():
+  def __init__(self, json):
+    self.read_only = json['read_only']
+    self.uuid = json['uuid']
+    self.active = json['active']
+    self.events = json['events']
+    self.url = json['url']
+    self.description = json['description']
+  
+  def __str__(self):
+    return '{uuid} - {url} ({description})'.format(**self.__dict__)
+
+def list_web_hooks(repos):
+  for repo in map(Repo, repos):
+    req = API2Request('https://api.bitbucket.org/2.0/repositories/{owner}/{slug}/hooks'.format(**repo))
+    for web_hook in req.open():
+      yield WebHook(web_hook)
+    # for access_key in access_keys:
+    #   yield SSHKeyEntry(SSHKey(access_key['key']), repo, access_key['pk'], access_key['label'])
+
 if __name__ == '__main__':
   parser = argparse.ArgumentParser()
   parser.add_argument('--verbose', action='store_true')
@@ -134,6 +173,10 @@ if __name__ == '__main__':
   remove_deploy_key_parser.set_defaults(function=remove_deploy_key)
   remove_deploy_key_parser.add_argument('--key', required=True)
   remove_deploy_key_parser.add_argument('repos', metavar='REPO', nargs='+')
+
+  list_web_hooks_parser = subparsers.add_parser('list_web_hooks')
+  list_web_hooks_parser.set_defaults(function=list_web_hooks)
+  list_web_hooks_parser.add_argument('repos', metavar='REPO', nargs='+')
 
   args = parser.parse_args()
 
