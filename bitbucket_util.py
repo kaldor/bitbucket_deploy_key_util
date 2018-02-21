@@ -127,25 +127,34 @@ def remove_deploy_key(key, repos):
     else:
       raise LookupError('{} was not found on repo {}'.format(key, repo))
 
-class WebHook():
-  def __init__(self, json):
-    self.read_only = json['read_only']
-    self.uuid = json['uuid']
-    self.active = json['active']
-    self.events = json['events']
-    self.url = json['url']
-    self.description = json['description']
-  
+class WebHookEntry(collections.namedtuple('WebHookEntry', ['url', 'repo', 'uuid', 'description'])):
   def __str__(self):
-    return '{uuid} - {url} ({description})'.format(**self.__dict__)
+    return '\t'.join(('{}'.format(getattr(self, field)) for field in self._fields))
+
+def add_web_hook(url, description, repos):
+  for repo in map(Repo, repos):
+    req = urllib2.Request('https://api.bitbucket.org/2.0/repositories/{owner}/{slug}/hooks'.format(**repo))
+    basicAuthString = base64.standard_b64encode('{}:{}'.format(username, secret))
+    req.add_header("Authorization", "Basic {}".format(basicAuthString))
+    req.add_header("Content-Type", "application/json")
+    d = {
+      'description': description,
+      'url': url,
+      'active': True,
+      'events': [
+        "repo:push",
+      ],
+    }
+    req.add_data(json.dumps(d))
+    f = urllib2.urlopen(req)
+    web_hook = json.load(f)
+    yield WebHookEntry(web_hook['url'],repo, web_hook['uuid'], web_hook['description'])
 
 def list_web_hooks(repos):
   for repo in map(Repo, repos):
     req = API2Request('https://api.bitbucket.org/2.0/repositories/{owner}/{slug}/hooks'.format(**repo))
     for web_hook in req.open():
-      yield WebHook(web_hook)
-    # for access_key in access_keys:
-    #   yield SSHKeyEntry(SSHKey(access_key['key']), repo, access_key['pk'], access_key['label'])
+      yield WebHookEntry(web_hook['url'],repo, web_hook['uuid'], web_hook['description'])
 
 if __name__ == '__main__':
   parser = argparse.ArgumentParser()
@@ -173,6 +182,12 @@ if __name__ == '__main__':
   remove_deploy_key_parser.set_defaults(function=remove_deploy_key)
   remove_deploy_key_parser.add_argument('--key', required=True)
   remove_deploy_key_parser.add_argument('repos', metavar='REPO', nargs='+')
+
+  add_web_hook_parser = subparsers.add_parser('add_web_hook')
+  add_web_hook_parser.set_defaults(function=add_web_hook)
+  add_web_hook_parser.add_argument('--url', required=True)
+  add_web_hook_parser.add_argument('--description', help='Description of webhook', required=True)
+  add_web_hook_parser.add_argument('repos', metavar='REPO', nargs='+')
 
   list_web_hooks_parser = subparsers.add_parser('list_web_hooks')
   list_web_hooks_parser.set_defaults(function=list_web_hooks)

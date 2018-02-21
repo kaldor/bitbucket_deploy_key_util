@@ -6,6 +6,8 @@ This utility supports the following subcommands:
 2. add_deploy_key
 3. list_deploy_keys
 4. remove_deploy_key
+5. add_web_hook
+6. list_web_hook
 
 It is self-documenting, use `./bitbucket_util.py -h` and `./bitbucket_util.py <subcommand> -h` to read the docs.
 
@@ -25,3 +27,14 @@ Remove a key from all repositories that include it:
     SSH_FINGERPRINT=$(echo $SSH_KEY | ssh-keygen -E MD5 -lf /dev/stdin)
     REPOS_WITH_KEY=$(./bitbucket_util.py list_deploy_keys $(./bitbucket_util list_repos) | grep $SSH_FINGERPRINT | cut -f 2)
     ./bitbucket_util.py remove_deploy_key --key "$SSH_KEY" $REPOS_WITH_KEY
+
+Check what repos are missing a given webhook (Fish shell syntax):
+
+    # assuming you have set the URL of you hook in a variable called WEBHOOK:
+    ./bitbucket_util.py list_repos "androidmodule\$" "iosmodule\$" > shouldhaveit.txt
+    ./bitbucket_util.py list_web_hooks (cat shouldhaveit.txt) | grep "$WEBHOOK" | cut -f 2 > haveit.txt
+    comm -23 shouldhaveit.txt haveit.txt > needit.txt
+    for repo in (cat needit.txt)
+        ./bitbucket_util.py add_web_hook --url "$WEBHOOK" --description "Slack to #pugpigmodules" "$repo"; and echo $repo >> haveit.txt
+    end
+    # if the loop fails at any point, restart from comm command
