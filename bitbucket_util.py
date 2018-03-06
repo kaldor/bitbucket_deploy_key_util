@@ -156,6 +156,20 @@ def list_web_hooks(repos):
     for web_hook in req.open():
       yield WebHookEntry(web_hook['url'],repo, web_hook['uuid'], web_hook['description'])
 
+def remove_web_hook(hookid, repos):
+  for repo in repos:
+    for hook in list_web_hooks([repo]):
+      if hook.uuid == hookid:
+        req = urllib2.Request('https://api.bitbucket.org/2.0/repositories/{owner}/{slug}/hooks/{uuid}'.format(uuid=hookid, **hook.repo))
+        basicAuthString = base64.standard_b64encode('{}:{}'.format(username, secret))
+        req.get_method = lambda: 'DELETE'
+        req.add_header("Authorization", "Basic {}".format(basicAuthString))
+        req.add_header("Content-Type", "application/json")
+        urllib2.urlopen(req)
+        yield hook
+    else:
+      raise LookupError('{} was not found on repo {}'.format(hookid, repo))
+
 if __name__ == '__main__':
   parser = argparse.ArgumentParser()
   parser.add_argument('--verbose', action='store_true')
@@ -192,6 +206,11 @@ if __name__ == '__main__':
   list_web_hooks_parser = subparsers.add_parser('list_web_hooks')
   list_web_hooks_parser.set_defaults(function=list_web_hooks)
   list_web_hooks_parser.add_argument('repos', metavar='REPO', nargs='+')
+
+  remove_web_hook_parser = subparsers.add_parser('remove_web_hook')
+  remove_web_hook_parser.set_defaults(function=remove_web_hook)
+  remove_web_hook_parser.add_argument('--hookid', required=True)
+  remove_web_hook_parser.add_argument('repos', metavar='REPO', nargs='+')
 
   args = parser.parse_args()
 
