@@ -18,6 +18,7 @@ class Repo():
     if isinstance(repo, collections.Mapping):
       self.owner = repo['owner']
       self.slug = repo['slug']
+      self.full_name = repo['full_name']
     elif isinstance(repo, basestring):
       self.owner, self.slug = repo.split('/')
     else:
@@ -31,6 +32,9 @@ class Repo():
 
   def __getitem__(self, key):
     return getattr(self, key)
+
+  def __str__(self):
+    return self.full_name
 
   def __repr__(self):
     return '{}/{}'.format(self.owner, self.slug)
@@ -57,15 +61,14 @@ class API2Request():
 def list_repos(regexes):
   regexes = map(re.compile, regexes)
 
-  req = urllib2.Request('https://api.bitbucket.org/1.0/user/repositories')
-  basicAuthString = base64.standard_b64encode('{}:{}'.format(username, secret))
-  req.add_header("Authorization", "Basic {}".format(basicAuthString))
-  f = urllib2.urlopen(req)
-  repos = json.load(f)
-  for repo in map(Repo, repos):
-    if any((repo.matches(regex) for regex in regexes)):
-      yield repo
-
+  workspacerequest = API2Request('https://api.bitbucket.org/2.0/workspaces')
+  for workspace in workspacerequest.open():
+    req = API2Request('https://api.bitbucket.org/2.0/repositories/{workspace}'.format(workspace=workspace["slug"]))
+    for repo in req.open():
+      repo = Repo(repo)
+      if any((repo.matches(regex) for regex in regexes)):
+        yield repo
+  
 class SSHKey():
   def __init__(self, key):
     self.key = key
