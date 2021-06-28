@@ -175,7 +175,7 @@ def remove_web_hook(hookid, repos):
 
 if __name__ == '__main__':
   parser = argparse.ArgumentParser()
-  parser.add_argument('--verbose', action='store_true')
+  parser.add_argument('--verbose', dest='fmt', action='store_const', const=repr, default=str)
 
   parser.add_argument('--username')
   parser.add_argument('--secret')
@@ -223,6 +223,6 @@ if __name__ == '__main__':
   if not username or not secret:
     parser.error('You must specify a username and secret, either by using the BITBUCKET_USERNAME and BITBUCKET_SECRET environment variables, or by using --username and --secret arguments')
 
-  func_args = {k:v for (k, v) in vars(args).iteritems() if k not in set(('function', 'secret', 'username', 'verbose'))}
+  func_args = {k:v for (k, v) in vars(args).iteritems() if k not in set(('function', 'secret', 'username', 'fmt'))}
   for item in args.function(**func_args):
-    print((repr if args.verbose else str)(item))
+    print(args.fmt(item))
