@@ -224,4 +224,5 @@ if __name__ == '__main__':
     parser.error('You must specify a username and secret, either by using the BITBUCKET_USERNAME and BITBUCKET_SECRET environment variables, or by using --username and --secret arguments')
 
   func_args = {k:v for (k, v) in vars(args).iteritems() if k not in set(('function', 'secret', 'username', 'verbose'))}
-  map(print, map(repr if args.verbose else str, args.function(**func_args)))
+  for item in args.function(**func_args):
+    print((repr if args.verbose else str)(item))
